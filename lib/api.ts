@@ -26,8 +26,7 @@ export async function fetchWithProxy(
 ): Promise<string> {
   if (attempt >= CORS_PROXIES.length) {
     throw new Error(
-      'All CORS proxies failed. ' +
-      'Try running the app from a local server (npm run dev) or use the Python script instead.'
+      'All CORS proxies failed. '
     );
   }
 
