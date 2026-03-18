@@ -142,6 +142,7 @@ export default function CitationMapper() {
             <div className="flex border-b border-white/[0.07] bg-[#111318] flex-shrink-0">
               {TABS.map(tab => (
                 <button
+                suppressHydrationWarning 
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={[

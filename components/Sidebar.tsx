@@ -78,6 +78,7 @@ export default function Sidebar({
             ⌕
           </span>
           <input
+          suppressHydrationWarning 
             type="text"
             value={filterText}
             onChange={e => setFilterText(e.target.value)}
@@ -124,6 +125,7 @@ export default function Sidebar({
          */}
         <div className="flex gap-2 items-center">
           <input
+          suppressHydrationWarning 
             type="range" min={2010} max={2025} value={yearMin}
             onChange={e => setYearMin(Math.min(Number(e.target.value), yearMax))}
             className="flex-1 min-w-0"
@@ -133,6 +135,7 @@ export default function Sidebar({
             {yearMin}–{yearMax}
           </span>
           <input
+          suppressHydrationWarning 
             type="range" min={2010} max={2025} value={yearMax}
             onChange={e => setYearMax(Math.max(Number(e.target.value), yearMin))}
             className="flex-1 min-w-0"

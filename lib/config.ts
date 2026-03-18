@@ -18,14 +18,23 @@ export const DEFAULT_MAX_RESULTS = 200;
 /** Delay (ms) between arXiv batch requests — be polite to the API */
 export const ARXIV_BATCH_DELAY_MS = 400;
 
-/** Quick-topic presets shown in the quick-bar */
+/**
+ * Quick-topic presets shown in the quick-bar.
+ * Deliberately spans many disciplines so the app feels welcoming to
+ * researchers outside computer science.
+ */
 export const QUICK_TOPICS: Array<{ label: string; query: string }> = [
-  { label: 'ML in agriculture',     query: 'machine learning in agriculture' },
-  { label: 'Medical imaging',       query: 'deep learning medical imaging' },
-  { label: 'Climate adaptation',    query: 'climate change adaptation' },
-  { label: 'Quantum computing',     query: 'quantum computing algorithms' },
-  { label: 'Federated learning',    query: 'federated learning privacy' },
-  { label: 'CRISPR',                query: 'CRISPR gene editing' },
-  { label: 'Large language models', query: 'large language models' },
-  { label: 'Drug discovery',        query: 'drug discovery machine learning' },
+  // Life sciences & medicine
+  { label: 'CRISPR gene editing',    query: 'CRISPR gene editing' },
+  { label: 'Cancer immunotherapy',   query: 'cancer immunotherapy treatment' },
+  { label: 'Antibiotic resistance',  query: 'antibiotic resistance bacteria' },
+  { label: 'COVID-19 epidemiology',  query: 'COVID-19 epidemiology outcomes' },
+  // Social & behavioural science
+  { label: 'Mental health social media', query: 'mental health social media' },
+  { label: 'Climate policy',         query: 'climate change policy adaptation' },
+  { label: 'Income inequality',      query: 'income inequality economic mobility' },
+  // Technology (kept but not dominant)
+  { label: 'Large language models',  query: 'large language models' },
+  { label: 'Quantum computing',      query: 'quantum computing algorithms' },
+  { label: 'Federated learning',     query: 'federated learning privacy' },
 ];

@@ -40,6 +40,7 @@ export default function Header({
             🔍
           </span>
           <input
+            suppressHydrationWarning 
             type="text"
             value={topicValue}
             onChange={e => onTopicChange(e.target.value)}
