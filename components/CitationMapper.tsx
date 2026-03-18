@@ -9,6 +9,7 @@ import { DEFAULT_MAX_RESULTS } from '@/lib/config';
 import { fetchArxiv, sleep } from '@/lib/api';
 import { buildNetwork, computeTrends } from '@/lib/network';
 
+import MobileGate     from './MobileGate';
 import LoadingOverlay from './LoadingOverlay';
 import Header         from './Header';
 import QuickBar       from './QuickBar';
@@ -93,7 +94,7 @@ export default function CitationMapper() {
 
   const handleSelectPaper = useCallback((id: string) => {
     setSelectedId(id);
-    setActiveTab('graph');   // switch so the highlight is immediately visible
+    setActiveTab('graph');
   }, []);
 
   const topicLabel = data
@@ -101,74 +102,80 @@ export default function CitationMapper() {
     : 'Enter a topic to explore the literature';
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0b0e] text-[#e8e6e0] overflow-hidden">
+    <>
+      {/* ── Mobile gate — visible below md breakpoint, hidden above ── */}
+      <MobileGate />
 
-      {loading.active && (
-        <LoadingOverlay text={loading.text} sub={loading.sub} />
-      )}
+      {/* ── Full app — hidden below md breakpoint, visible above ── */}
+      <div className="hidden md:flex flex-col h-screen bg-[#0a0b0e] text-[#e8e6e0] overflow-hidden">
 
-      <Header
-        topicLabel={topicLabel}
-        nodeCount={data?.nodes.length ?? null}
-        edgeCount={data?.edges.length ?? null}
-        topicValue={topic}
-        onTopicChange={setTopic}
-        onSearch={() => startSearch()}
-        searching={loading.active}
-      />
+        {loading.active && (
+          <LoadingOverlay text={loading.text} sub={loading.sub} />
+        )}
 
-      <QuickBar onSearch={startSearch} />
-
-      {/* ── App grid: sidebar + main ── */}
-      <div className="grid flex-1 overflow-hidden" style={{ gridTemplateColumns: '272px 1fr' }}>
-
-        <Sidebar
-          data={data}
-          edgeFilter={edgeFilter}
-          onEdgeFilter={setEdgeFilter}
-          selectedId={selectedId}
-          onSelectPaper={handleSelectPaper}
+        <Header
+          topicLabel={topicLabel}
+          nodeCount={data?.nodes.length ?? null}
+          edgeCount={data?.edges.length ?? null}
+          topicValue={topic}
+          onTopicChange={setTopic}
+          onSearch={() => startSearch()}
+          searching={loading.active}
         />
 
-        <main className="flex flex-col overflow-hidden">
+        <QuickBar onSearch={startSearch} />
 
-          {/* Tab bar */}
-          <div className="flex border-b border-white/[0.07] bg-[#111318] flex-shrink-0">
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={[
-                  'px-4 py-3 text-sm cursor-pointer border-b-2 transition-all select-none bg-transparent',
-                  activeTab === tab.id
-                    ? 'text-[#e8e6e0] border-[#4f8ef7]'
-                    : 'text-[#686660] border-transparent hover:text-[#e8e6e0]',
-                ].join(' ')}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        {/* ── App grid: sidebar + main ── */}
+        <div className="grid flex-1 overflow-hidden" style={{ gridTemplateColumns: '272px 1fr' }}>
 
-          {/* Panels — keep all mounted so D3/Chart state survives tab switches */}
-          <div className={`flex-1 overflow-hidden ${activeTab === 'graph' ? 'flex' : 'hidden'}`}>
-            <GraphPanel
-              data={data}
-              edgeFilter={edgeFilter}
-              highlightId={selectedId}
-            />
-          </div>
+          <Sidebar
+            data={data}
+            edgeFilter={edgeFilter}
+            onEdgeFilter={setEdgeFilter}
+            selectedId={selectedId}
+            onSelectPaper={handleSelectPaper}
+          />
 
-          <div className={`flex-1 overflow-hidden ${activeTab === 'trends' ? 'flex' : 'hidden'}`}>
-            <TrendsPanel data={data} />
-          </div>
+          <main className="flex flex-col overflow-hidden">
 
-          <div className={`flex-1 overflow-hidden ${activeTab === 'top' ? 'flex' : 'hidden'}`}>
-            <TopPapersPanel data={data} />
-          </div>
+            {/* Tab bar */}
+            <div className="flex border-b border-white/[0.07] bg-[#111318] flex-shrink-0">
+              {TABS.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={[
+                    'px-4 py-3 text-sm cursor-pointer border-b-2 transition-all select-none bg-transparent',
+                    activeTab === tab.id
+                      ? 'text-[#e8e6e0] border-[#4f8ef7]'
+                      : 'text-[#686660] border-transparent hover:text-[#e8e6e0]',
+                  ].join(' ')}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-        </main>
+            {/* Panels — all mounted so D3/Chart state survives tab switches */}
+            <div className={`flex-1 overflow-hidden ${activeTab === 'graph' ? 'flex' : 'hidden'}`}>
+              <GraphPanel
+                data={data}
+                edgeFilter={edgeFilter}
+                highlightId={selectedId}
+              />
+            </div>
+
+            <div className={`flex-1 overflow-hidden ${activeTab === 'trends' ? 'flex' : 'hidden'}`}>
+              <TrendsPanel data={data} />
+            </div>
+
+            <div className={`flex-1 overflow-hidden ${activeTab === 'top' ? 'flex' : 'hidden'}`}>
+              <TopPapersPanel data={data} />
+            </div>
+
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
