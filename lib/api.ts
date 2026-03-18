@@ -1,73 +1,71 @@
 // lib/api.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// Network layer: CORS proxy chain and arXiv Atom API client.
+// -----------------------------------------------------------------------------
+// Network layer: arXiv client that calls the internal Next.js proxy route.
+//
+// All arXiv fetches go through /api/arxiv which runs server-side — no CORS
+// restrictions, no third-party proxy, no 403s on deployed domains.
 
 import {
-  CORS_PROXIES,
-  ARXIV_BASE,
   ARXIV_BATCH_SIZE,
   DEFAULT_MAX_RESULTS,
   ARXIV_BATCH_DELAY_MS,
 } from './config';
 import type { Paper } from './types';
 
-/** Promise-based sleep helper used for rate-limiting. */
+/** Promise-based sleep used for rate-limiting between batches. */
 export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
- * Fetch a URL through the CORS proxy chain, falling back to the next proxy
- * on each failure.
+ * Fetch one batch of arXiv results via the internal server-side proxy.
+ * Returns raw Atom XML as a string.
  */
-export async function fetchWithProxy(
-  rawUrl: string,
-  attempt = 0
-): Promise<string> {
-  if (attempt >= CORS_PROXIES.length) {
+async function fetchBatch(params: URLSearchParams): Promise<string> {
+  const url = `/api/arxiv?${params.toString()}`;
+
+  const resp = await fetch(url, { signal: AbortSignal.timeout(25_000) });
+
+  if (!resp.ok) {
     throw new Error(
-      'All CORS proxies failed. '
+      `arXiv proxy returned ${resp.status}: ${await resp.text().catch(() => '')}`
     );
   }
 
-  const proxiedUrl = CORS_PROXIES[attempt](rawUrl);
-
-  try {
-    const resp = await fetch(proxiedUrl, { signal: AbortSignal.timeout(12_000) });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    return await resp.text();
-  } catch (err) {
-    console.warn(`[api] Proxy ${attempt} failed (${(err as Error).message}), trying next…`);
-    return fetchWithProxy(rawUrl, attempt + 1);
-  }
+  return resp.text();
 }
 
 /**
- * Fetch paper metadata from the arXiv Atom API in batches.
+ * Fetch paper metadata from arXiv in batches via /api/arxiv.
  *
- * Each yielded paper has the shape defined by the `Paper` interface.
- * The `onProgress` callback lets the caller update loading UI.
+ * Each paper in the returned array conforms to the Paper interface.
+ * The optional onProgress callback is called before each batch so the
+ * caller can update loading UI.
  */
 export async function fetchArxiv(
   topic: string,
   maxResults: number = DEFAULT_MAX_RESULTS,
-  onProgress?: (text: string, sub: string) => void
+  onProgress?: (text: string, sub: string) => void,
 ): Promise<Paper[]> {
   const allPapers: Paper[] = [];
   let start = 0;
 
   while (allPapers.length < maxResults) {
-    const count  = Math.min(ARXIV_BATCH_SIZE, maxResults - allPapers.length);
-    const rawUrl =
-      `${ARXIV_BASE}?search_query=all:${encodeURIComponent(topic)}` +
-      `&start=${start}&max_results=${count}&sortBy=relevance`;
+    const count = Math.min(ARXIV_BATCH_SIZE, maxResults - allPapers.length);
 
     onProgress?.(
       `Fetching papers ${allPapers.length + 1}–${allPapers.length + count} from arXiv…`,
-      'Routing via CORS proxy…'
+      'Querying…',
     );
 
-    const xml     = await fetchWithProxy(rawUrl);
+    const params = new URLSearchParams({
+      search_query: `all:${topic}`,
+      start:        String(start),
+      max_results:  String(count),
+      sortBy:       'relevance',
+    });
+
+    const xml     = await fetchBatch(params);
     const doc     = new DOMParser().parseFromString(xml, 'text/xml');
     const entries = doc.querySelectorAll('entry');
 
@@ -98,7 +96,7 @@ export async function fetchArxiv(
     });
 
     start += count;
-    if (entries.length < count) break;
+    if (entries.length < count) break;   // arXiv has no more results
     await sleep(ARXIV_BATCH_DELAY_MS);
   }
 
