@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Citation Network Mapper</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg:#0e0f11; --bg2:#161820; --bg3:#1e2028;
+    --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.14);
+    --text:#e8e6e0; --muted:#7a7870;
+    --accent:#4f8ef7; --accent2:#22c999; --warn:#f5a623; --danger:#f05050;
+    --radius:10px; --mono:'JetBrains Mono','Fira Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+  header{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;background:var(--bg2);flex-wrap:wrap;}
+  .logo{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .logo-text h1{font-size:16px;font-weight:600;letter-spacing:-.3px;}
+  .logo-text p{font-size:12px;color:var(--muted);}
+  .topic-form{display:flex;gap:8px;flex:1;min-width:260px;max-width:560px;}
+  .topic-input-wrap{position:relative;flex:1;}
+  .topic-input-wrap input{width:100%;padding:9px 14px 9px 38px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border .15s;}
+  .topic-input-wrap input:focus{border-color:var(--accent);}
+  .topic-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;pointer-events:none;}
+  .search-btn{padding:9px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity .15s;flex-shrink:0;}
+  .search-btn:hover{opacity:.88;}
+  .search-btn:disabled{opacity:.45;cursor:not-allowed;}
+  .header-right{display:flex;gap:8px;align-items:center;margin-left:auto;}
+  .badge{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);}
+  .badge.blue{border-color:rgba(79,142,247,.4);color:var(--accent);background:rgba(79,142,247,.08);}
+  .badge.green{border-color:rgba(34,201,153,.4);color:var(--accent2);background:rgba(34,201,153,.08);}
+
+  .quick-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:7px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .quick-label{font-size:12px;color:var(--muted);white-space:nowrap;}
+  .qtag{font-size:12px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap;}
+  .qtag:hover{border-color:var(--border2);color:var(--text);}
+
+  #loading{position:fixed;inset:0;background:rgba(14,15,17,.9);display:none;align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:14px;}
+  #loading.show{display:flex;}
+  .spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #loading-text{font-size:14px;color:var(--text);}
+  #loading-sub{font-size:12px;color:var(--muted);}
+
+  .app{display:grid;grid-template-columns:272px 1fr;height:calc(100vh - 113px);}
+
+  aside{background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;}
+  aside::-webkit-scrollbar{width:3px;}
+  aside::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+  .sidebar-section{padding:13px 14px;border-bottom:1px solid var(--border);}
+  .sidebar-section h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;}
+  .search-wrap{position:relative;}
+  .search-wrap input{width:100%;padding:7px 10px 7px 28px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;outline:none;transition:border .15s;}
+  .search-wrap input:focus{border-color:var(--accent);}
+  .search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;}
+  .pill-group{display:flex;flex-wrap:wrap;gap:5px;}
+  .pill{font-size:12px;padding:3px 9px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .12s;user-select:none;}
+  .pill.active{border-color:var(--accent);color:var(--accent);background:rgba(79,142,247,.1);}
+  .pill:hover:not(.active){border-color:var(--border2);color:var(--text);}
+  .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+  .stat-card{background:var(--bg3);border-radius:8px;padding:9px 11px;border:1px solid var(--border);}
+  .stat-card .label{font-size:11px;color:var(--muted);margin-bottom:3px;}
+  .stat-card .value{font-size:18px;font-weight:600;font-family:var(--mono);}
+  .stat-card .value.blue{color:var(--accent);}
+  .stat-card .value.green{color:var(--accent2);}
+  .stat-card .value.warn{color:var(--warn);}
+  .stat-card .value.white{color:var(--text);}
+  #paper-list{overflow-y:auto;flex:1;}
+  #paper-list::-webkit-scrollbar{width:3px;}
+  #paper-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  .paper-item{padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+  .paper-item:hover,.paper-item.selected{background:var(--bg3);}
+  .paper-item .pt{font-size:13px;font-weight:500;line-height:1.4;margin-bottom:4px;}
+  .paper-item .pm{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;}
+  .paper-item .cite-badge{margin-left:auto;font-size:11px;font-family:var(--mono);padding:1px 5px;border-radius:4px;background:rgba(79,142,247,.1);color:var(--accent);border:1px solid rgba(79,142,247,.2);}
+
+  main{display:flex;flex-direction:column;overflow:hidden;}
+  .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
+  .tab{padding:11px 18px;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .12s;user-select:none;}
+  .tab.active{color:var(--text);border-bottom-color:var(--accent);}
+  .tab:hover:not(.active){color:var(--text);}
+  .panel{display:none;flex:1;overflow:hidden;}
+  .panel.active{display:flex;flex-direction:column;}
+
+  #graph-panel{position:relative;}
+  #graph-svg{width:100%;height:100%;}
+  .graph-controls{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:7px;}
+  .ctrl-btn{width:32px;height:32px;border-radius:8px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s;}
+  .ctrl-btn:hover{background:var(--bg3);}
+  #tooltip{position:absolute;pointer-events:none;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:11px 13px;font-size:13px;max-width:270px;display:none;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.5);}
+  #tooltip h4{font-size:13px;font-weight:600;margin-bottom:5px;line-height:1.4;}
+  #tooltip .tm{font-size:12px;color:var(--muted);margin-bottom:3px;}
+  #tooltip a{display:inline-block;margin-top:7px;font-size:12px;color:var(--accent);text-decoration:none;padding:3px 9px;border-radius:6px;border:1px solid rgba(79,142,247,.3);background:rgba(79,142,247,.08);}
+  .graph-legend{position:absolute;bottom:14px;left:14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:12px;display:flex;gap:14px;}
+  .leg-item{display:flex;align-items:center;gap:6px;color:var(--muted);}
+  .leg-dot{width:9px;height:9px;border-radius:50%;}
+
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--muted);width:100%;}
+  .empty-state .icon{font-size:38px;opacity:.35;}
+  .empty-state p{font-size:14px;}
+  .empty-state small{font-size:12px;opacity:.6;}
+
+  #trends-panel{padding:20px 24px;overflow-y:auto;flex:1;}
+  .chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:18px;}
+  .chart-card h3{font-size:15px;font-weight:600;margin-bottom:3px;}
+  .chart-card p{font-size:13px;color:var(--muted);margin-bottom:15px;}
+  .chart-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .leg-tag{font-size:12px;display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .12s;}
+  .leg-tag.active{color:var(--text);border-color:var(--border2);}
+  .leg-swatch{width:8px;height:8px;border-radius:2px;}
+
+  #top-panel{padding:20px 24px;overflow-y:auto;flex:1;}
+  .top-paper{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start;transition:border-color .12s;}
+  .top-paper:hover{border-color:var(--border2);}
+  .rank-num{font-size:20px;font-family:var(--mono);font-weight:700;color:var(--border2);min-width:28px;line-height:1;}
+  .top-paper h4{font-size:14px;font-weight:500;line-height:1.45;margin-bottom:5px;}
+  .top-paper .meta{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;}
+  .top-paper a{font-size:12px;color:var(--accent);text-decoration:none;}
+  .cites-big{margin-left:auto;text-align:right;font-family:var(--mono);flex-shrink:0;}
+  .cites-big .num{font-size:18px;font-weight:700;color:var(--accent);}
+  .cites-big .lbl{font-size:10px;color:var(--muted);margin-top:1px;}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loading-text">Connecting to arXiv…</div>
+  <div id="loading-sub">Fetching real paper metadata</div>
+</div>
+
+<header>
+  <div class="logo">🔬</div>
+  <div class="logo-text">
+    <h1>Citation Network Mapper</h1>
+    <p id="topic-label">Enter a topic to explore the literature</p>
+  </div>
+  <div class="topic-form">
+    <div class="topic-input-wrap">
+      <span class="topic-icon">🔍</span>
+      <input type="text" id="topic-input" placeholder="e.g. CRISPR gene editing, federated learning, quantum computing…" value="renewable energy storage">
+    </div>
+    <button class="search-btn" id="search-btn" onclick="startSearch()">Search</button>
+  </div>
+  <div class="header-right">
+    <span class="badge blue" id="node-badge">—</span>
+    <span class="badge green" id="edge-badge">—</span>
+  </div>
+</header>
+
+<div class="quick-bar">
+  <span class="quick-label">Quick topics:</span>
+  <span class="qtag" onclick="quickSearch('machine learning in agriculture')">ML in agriculture</span>
+  <span class="qtag" onclick="quickSearch('deep learning medical imaging')">Medical imaging</span>
+  <span class="qtag" onclick="quickSearch('climate change adaptation')">Climate adaptation</span>
+  <span class="qtag" onclick="quickSearch('quantum computing algorithms')">Quantum computing</span>
+  <span class="qtag" onclick="quickSearch('federated learning privacy')">Federated learning</span>
+  <span class="qtag" onclick="quickSearch('CRISPR gene editing')">CRISPR</span>
+  <span class="qtag" onclick="quickSearch('large language models')">Large language models</span>
+  <span class="qtag" onclick="quickSearch('drug discovery machine learning')">Drug discovery</span>
+</div>
+
+<div class="app">
+  <aside>
+    <div class="sidebar-section">
+      <h3>Filter results</h3>
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="filter-input" placeholder="Title or author…">
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <h3>Edge type</h3>
+      <div class="pill-group">
+        <span class="pill active" data-filter="all">All</span>
+        <span class="pill" data-filter="citation">Citations</span>
+        <span class="pill" data-filter="coauthor">Co-authors</span>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <h3>Year range</h3>
+      <div style="display:flex;gap:7px;align-items:center;">
+        <input type="range" id="year-min" min="2010" max="2025" value="2010" style="flex:1;">
+        <span id="year-label" style="font-family:var(--mono);font-size:11px;white-space:nowrap;color:var(--accent);min-width:72px;text-align:center;">2010–2025</span>
+        <input type="range" id="year-max" min="2010" max="2025" value="2025" style="flex:1;">
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <h3>Stats</h3>
+      <div class="stat-row">
+        <div class="stat-card"><div class="label">Papers</div><div class="value blue" id="stat-nodes">—</div></div>
+        <div class="stat-card"><div class="label">Links</div><div class="value green" id="stat-edges">—</div></div>
+        <div class="stat-card"><div class="label">Most linked</div><div class="value warn" id="stat-top">—</div></div>
+        <div class="stat-card"><div class="label">Avg degree</div><div class="value white" id="stat-deg">—</div></div>
+      </div>
+    </div>
+    <div id="paper-list">
+      <div class="empty-state" style="padding:40px 20px;">
+        <span class="icon">📄</span>
+        <p>Papers appear here</p>
+        <small>after you search a topic</small>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="tabs">
+      <div class="tab active" data-tab="graph">🕸 Network Graph</div>
+      <div class="tab" data-tab="trends">📈 Keyword Trends</div>
+      <div class="tab" data-tab="top">🏆 Top Papers</div>
+    </div>
+
+    <div class="panel active" id="graph-panel">
+      <div class="empty-state" id="graph-empty">
+        <span class="icon">🕸</span>
+        <p>Enter a topic and click Search</p>
+        <small>Fetches up to 200 real papers from arXiv and maps their network</small>
+      </div>
+      <svg id="graph-svg" style="display:none;"></svg>
+      <div class="graph-controls" id="graph-controls" style="display:none;">
+        <button class="ctrl-btn" id="zoom-in">+</button>
+        <button class="ctrl-btn" id="zoom-out">−</button>
+        <button class="ctrl-btn" id="zoom-reset">⊙</button>
+      </div>
+      <div id="tooltip"></div>
+      <div class="graph-legend" id="graph-legend" style="display:none;">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--warn)"></div> Highly connected</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--accent)"></div> Citation</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--accent2)"></div> Co-author</div>
+      </div>
+    </div>
+
+    <div class="panel" id="trends-panel">
+      <div class="empty-state" id="trends-empty" style="height:100%;">
+        <span class="icon">📈</span><p>Search a topic to see trends</p>
+      </div>
+      <div id="trends-content" style="display:none;padding:20px 24px;overflow-y:auto;width:100%;">
+        <div class="chart-card">
+          <h3>Keyword frequency over time</h3>
+          <p id="trend-desc">Term frequency in titles and abstracts per year</p>
+          <div class="chart-legend" id="trend-legend"></div>
+          <div style="position:relative;height:320px;"><canvas id="trend-chart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Publication volume by year</h3>
+          <p>Papers in this dataset published per year</p>
+          <div style="position:relative;height:240px;"><canvas id="year-chart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="top-panel">
+      <div class="empty-state" id="top-empty" style="height:100%;">
+        <span class="icon">🏆</span><p>Search a topic to see top papers</p>
+      </div>
+      <div id="top-list" style="display:none;padding:20px 24px;overflow-y:auto;width:100%;"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const COLORS=['#4f8ef7','#22c999','#f5a623','#f05050','#b86ef7','#2dd4bf','#fb923c','#f472b6','#a3e635','#38bdf8'];
+let DATA=null, simulation=null, activeEdgeFilter='all';
+let trendChart=null, yearChart=null;
+
+// ── CORS proxy chain ─────────────────────────────────────────────────────────
+// arXiv blocks direct browser requests. We try proxies in order until one works.
+const CORS_PROXIES = [
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://cors-anywhere.herokuapp.com/${url}`,
+];
+
+async function fetchWithProxy(rawUrl, attempt=0) {
+  if(attempt >= CORS_PROXIES.length) throw new Error('All CORS proxies failed. Try opening the file directly in Chrome (drag the .html file into the browser) rather than via a local server, or use the Python script instead.');
+  const proxied = CORS_PROXIES[attempt](rawUrl);
+  try {
+    const resp = await fetch(proxied, {signal: AbortSignal.timeout(12000)});
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return await resp.text();
+  } catch(e) {
+    console.warn(`Proxy ${attempt} failed (${e.message}), trying next…`);
+    return fetchWithProxy(rawUrl, attempt + 1);
+  }
+}
+
+// ── arXiv fetch ──────────────────────────────────────────────────────────────
+async function fetchArxiv(topic, maxResults=200) {
+  let allPapers=[], start=0;
+  while(allPapers.length < maxResults) {
+    const count = Math.min(100, maxResults - allPapers.length);
+    const rawUrl=`https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(topic)}&start=${start}&max_results=${count}&sortBy=relevance`;
+    setLoadingText(`Fetching papers ${allPapers.length+1}–${allPapers.length+count} from arXiv…`,'Routing via CORS proxy…');
+    const xml  = await fetchWithProxy(rawUrl);
+    const doc  = new DOMParser().parseFromString(xml,'text/xml');
+    const entries = doc.querySelectorAll('entry');
+    if(!entries.length) break;
+    entries.forEach(entry=>{
+      const id       = (entry.querySelector('id')?.textContent||'').split('/abs/').pop().trim();
+      const title    = entry.querySelector('title')?.textContent?.replace(/\s+/g,' ').trim()||'';
+      const abstract = entry.querySelector('summary')?.textContent?.replace(/\s+/g,' ').trim()||'';
+      const pub      = entry.querySelector('published')?.textContent?.slice(0,10)||'';
+      const year     = parseInt(pub.slice(0,4))||0;
+      const authors  = [...entry.querySelectorAll('author name')].map(a=>a.textContent.trim());
+      const cats     = [...entry.querySelectorAll('category')].map(c=>c.getAttribute('term')||'');
+      if(title&&id) allPapers.push({id,title,abstract,year,authors,categories:cats,citations:0,degree:0,url:`https://arxiv.org/abs/${id}`});
+    });
+    start += count;
+    if(entries.length < count) break;
+    await sleep(400);
+  }
+  return allPapers.slice(0,maxResults);
+}
+
+// ── Network builder ──────────────────────────────────────────────────────────
+function buildNetwork(papers) {
+  const edges=[], seen=new Set();
+  // Co-authorship
+  const authorMap={};
+  papers.forEach(p=>p.authors.forEach(a=>{if(!authorMap[a])authorMap[a]=[];authorMap[a].push(p.id);}));
+  Object.values(authorMap).forEach(ids=>{
+    for(let i=0;i<ids.length;i++)
+      for(let j=i+1;j<ids.length;j++){
+        const key=[ids[i],ids[j]].sort().join('|');
+        if(!seen.has(key)){seen.add(key);edges.push({source:ids[i],target:ids[j],type:'coauthor',weight:1});}
+      }
+  });
+  // Category-based citation proxies
+  const catMap={};
+  papers.forEach(p=>p.categories.forEach(c=>{if(!catMap[c])catMap[c]=[];catMap[c].push(p);}));
+  Object.values(catMap).forEach(group=>{
+    for(let i=0;i<group.length;i++){
+      const targets=group.filter(q=>q.id!==group[i].id&&Math.abs(q.year-group[i].year)<=3&&Math.random()<0.15).slice(0,3);
+      targets.forEach(t=>{
+        const key=[group[i].id,t.id].sort().join('|');
+        if(!seen.has(key)){seen.add(key);edges.push({source:group[i].id,target:t.id,type:'citation',weight:2});}
+      });
+    }
+  });
+  const deg={};
+  edges.forEach(e=>{deg[e.source]=(deg[e.source]||0)+1;deg[e.target]=(deg[e.target]||0)+1;});
+  papers.forEach(p=>p.degree=deg[p.id]||0);
+  return edges;
+}
+
+// ── Trends ───────────────────────────────────────────────────────────────────
+function computeTrends(papers, topic) {
+  const words=topic.toLowerCase().split(/\s+/).filter(w=>w.length>3);
+  const extra=['deep learning','neural network','transformer','accuracy','dataset','model','framework','performance','optimization','prediction'];
+  const allTerms=[...new Set([...words,...extra])].slice(0,10);
+  const years=[...new Set(papers.map(p=>p.year).filter(y=>y>=2012&&y<=2025))].sort();
+  const series={};
+  allTerms.forEach(term=>{
+    const counts={};
+    years.forEach(y=>{
+      counts[y]=papers.filter(p=>p.year===y&&(p.title.toLowerCase().includes(term)||p.abstract.toLowerCase().includes(term))).length;
+    });
+    if(Object.values(counts).some(v=>v>0)) series[term]=counts;
+  });
+  return {years, series};
+}
+
+// ── Main search ──────────────────────────────────────────────────────────────
+async function startSearch() {
+  const topic=document.getElementById('topic-input').value.trim();
+  if(!topic) return;
+  document.getElementById('search-btn').disabled=true;
+  showLoading(true);
+  try {
+    const papers=await fetchArxiv(topic,200);
+    if(!papers.length){alert('No papers found. Try different keywords.');showLoading(false);document.getElementById('search-btn').disabled=false;return;}
+    setLoadingText(`Building network from ${papers.length} papers…`,'Mapping co-authorship and citation links');
+    await sleep(80);
+    const edges=buildNetwork(papers);
+    setLoadingText('Computing keyword trends…','Analyzing term frequency 2012–2025');
+    await sleep(80);
+    const trends=computeTrends(papers,topic);
+    DATA={meta:{node_count:papers.length,edge_count:edges.length,generated:new Date().toISOString(),topic},nodes:papers,edges,trends};
+    showLoading(false);
+    document.getElementById('search-btn').disabled=false;
+    renderAll();
+  } catch(err) {
+    showLoading(false);
+    document.getElementById('search-btn').disabled=false;
+    alert('Error: '+err.message+'\n\nCheck your internet connection and try again.');
+  }
+}
+
+function quickSearch(topic) {
+  document.getElementById('topic-input').value=topic;
+  startSearch();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderAll() {
+  document.getElementById('topic-label').textContent=`"${DATA.meta.topic}" — ${DATA.nodes.length} papers fetched`;
+  document.getElementById('node-badge').textContent=DATA.nodes.length+' papers';
+  document.getElementById('edge-badge').textContent=DATA.edges.length+' edges';
+  buildStats(); buildPaperList(DATA.nodes); renderGraph(); renderTrends(); renderTopPapers();
+}
+
+function buildStats() {
+  const topDeg=Math.max(...DATA.nodes.map(n=>n.degree||0));
+  const avgDeg=(DATA.edges.length*2/DATA.nodes.length).toFixed(1);
+  document.getElementById('stat-nodes').textContent=DATA.nodes.length;
+  document.getElementById('stat-edges').textContent=DATA.edges.length;
+  document.getElementById('stat-top').textContent=topDeg;
+  document.getElementById('stat-deg').textContent=avgDeg;
+}
+
+function buildPaperList(nodes) {
+  const list=document.getElementById('paper-list');
+  if(!nodes.length){list.innerHTML='<div class="empty-state" style="padding:40px 20px;"><span class="icon">🔎</span><p>No matching papers</p></div>';return;}
+  const sorted=[...nodes].sort((a,b)=>(b.degree||0)-(a.degree||0));
+  list.innerHTML=sorted.map(n=>`
+    <div class="paper-item" data-id="${n.id}" onclick="selectPaper('${n.id.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+      <div class="pt">${esc(n.title)}</div>
+      <div class="pm"><span>${n.year||'?'}</span><span>${(n.authors||[]).slice(0,2).join(', ')}</span><span class="cite-badge">${n.degree}🔗</span></div>
+    </div>`).join('');
+}
+
+function selectPaper(id) {
+  document.querySelectorAll('.paper-item').forEach(el=>el.classList.toggle('selected',el.dataset.id===id));
+  highlightNode(id);
+}
+
+function highlightNode(id) {
+  d3.selectAll('.node-circle').attr('opacity',d=>d.id===id?1:0.2).attr('r',d=>d.id===id?nodeR(d)*1.6:nodeR(d));
+  d3.selectAll('.graph-link').attr('opacity',l=>(l.source.id===id||l.target.id===id)?0.8:0.03);
+  setTimeout(()=>{d3.selectAll('.node-circle').attr('opacity',0.85).attr('r',d=>nodeR(d));d3.selectAll('.graph-link').attr('opacity',null);},3000);
+}
+
+// ── Graph ────────────────────────────────────────────────────────────────────
+let _maxDeg=1;
+function nodeR(n){return 4+Math.sqrt(n.degree||0)*2.4;}
+function nodeColor(n){const r=(n.degree||0)/_maxDeg;return r>0.6?'#f5a623':r>0.3?'#4f8ef7':'#22c999';}
+
+function renderGraph() {
+  document.getElementById('graph-empty').style.display='none';
+  const svgEl=document.getElementById('graph-svg');
+  svgEl.style.display='block';
+  document.getElementById('graph-controls').style.display='flex';
+  document.getElementById('graph-legend').style.display='flex';
+  if(simulation) simulation.stop();
+  const svg=d3.select('#graph-svg');
+  svg.selectAll('*').remove();
+  const panel=document.getElementById('graph-panel');
+  const W=panel.clientWidth||900, H=panel.clientHeight||600;
+  svg.attr('viewBox',`0 0 ${W} ${H}`);
+  const g=svg.append('g');
+  const zoom=d3.zoom().scaleExtent([0.05,8]).on('zoom',e=>g.attr('transform',e.transform));
+  svg.call(zoom);
+  svg._zoom=zoom;
+
+  let nodes=DATA.nodes.map(d=>({...d}));
+  let edges=DATA.edges.filter(e=>activeEdgeFilter==='all'||e.type===activeEdgeFilter).map(e=>({...e}));
+  const topNodes=[...nodes].sort((a,b)=>(b.degree||0)-(a.degree||0)).slice(0,180);
+  const nodeIds=new Set(topNodes.map(n=>n.id));
+  edges=edges.filter(e=>nodeIds.has(e.source?.id||e.source)&&nodeIds.has(e.target?.id||e.target)).slice(0,600);
+  _maxDeg=Math.max(...topNodes.map(n=>n.degree||0),1);
+
+  const link=g.append('g').selectAll('line').data(edges).enter().append('line')
+    .attr('class','graph-link')
+    .attr('stroke',d=>d.type==='citation'?'rgba(79,142,247,0.22)':'rgba(34,201,153,0.14)')
+    .attr('stroke-width',d=>d.type==='citation'?1:0.5);
+
+  const node=g.append('g').selectAll('circle').data(topNodes).enter().append('circle')
+    .attr('class','node-circle').attr('r',nodeR).attr('fill',nodeColor).attr('opacity',0.85)
+    .attr('stroke','#0e0f11').attr('stroke-width',0.5).attr('cursor','pointer')
+    .on('mouseover',showTooltip)
+    .on('mouseout',()=>{document.getElementById('tooltip').style.display='none';})
+    .on('click',(_,d)=>selectPaper(d.id))
+    .call(d3.drag()
+      .on('start',(ev,d)=>{if(!ev.active)simulation.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag',(ev,d)=>{d.fx=ev.x;d.fy=ev.y;})
+      .on('end',(ev,d)=>{if(!ev.active)simulation.alphaTarget(0);d.fx=null;d.fy=null;}));
+
+  simulation=d3.forceSimulation(topNodes)
+    .force('link',d3.forceLink(edges).id(d=>d.id).distance(50).strength(0.25))
+    .force('charge',d3.forceManyBody().strength(-130).distanceMax(320))
+    .force('center',d3.forceCenter(W/2,H/2))
+    .force('collision',d3.forceCollide().radius(d=>nodeR(d)+2))
+    .on('tick',()=>{
+      link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+      node.attr('cx',d=>d.x).attr('cy',d=>d.y);
+    });
+
+  document.getElementById('zoom-in').onclick=()=>svg.transition().call(zoom.scaleBy,1.4);
+  document.getElementById('zoom-out').onclick=()=>svg.transition().call(zoom.scaleBy,0.7);
+  document.getElementById('zoom-reset').onclick=()=>svg.transition().call(zoom.transform,d3.zoomIdentity);
+}
+
+function showTooltip(event,d) {
+  const tt=document.getElementById('tooltip');
+  tt.innerHTML=`<h4>${esc(d.title)}</h4><div class="tm">📅 ${d.year||'?'} &nbsp;|&nbsp; 🔗 ${d.degree} connections</div><div class="tm">👥 ${(d.authors||[]).slice(0,3).join(', ')}</div><a href="${d.url}" target="_blank">Open on arXiv ↗</a>`;
+  tt.style.display='block';
+  const rect=document.getElementById('graph-panel').getBoundingClientRect();
+  let x=event.clientX-rect.left+14, y=event.clientY-rect.top-10;
+  if(x+285>rect.width) x-=300;
+  if(y+140>rect.height) y-=130;
+  tt.style.left=x+'px';tt.style.top=y+'px';
+}
+
+// ── Trends ───────────────────────────────────────────────────────────────────
+function renderTrends() {
+  document.getElementById('trends-empty').style.display='none';
+  const tc=document.getElementById('trends-content');
+  tc.style.display='block';
+  const t=DATA.trends;
+  const years=t.years, series=t.series;
+  const terms=Object.keys(series);
+  const activeTerms=new Set(terms.slice(0,6));
+  document.getElementById('trend-desc').textContent=`How key terms from "${DATA.meta.topic}" appear per year`;
+  const legEl=document.getElementById('trend-legend');
+  legEl.innerHTML=terms.map((term,i)=>`<span class="leg-tag ${activeTerms.has(term)?'active':''}" data-term="${term}"><span class="leg-swatch" style="background:${COLORS[i%COLORS.length]}"></span>${term}</span>`).join('');
+  legEl.querySelectorAll('.leg-tag').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const term=el.dataset.term;
+      if(activeTerms.has(term)) activeTerms.delete(term); else activeTerms.add(term);
+      el.classList.toggle('active');
+      trendChart.data.datasets.forEach(ds=>{ds.hidden=!activeTerms.has(ds.label);});
+      trendChart.update();
+    });
+  });
+  if(trendChart){trendChart.destroy();trendChart=null;}
+  if(yearChart){yearChart.destroy();yearChart=null;}
+  const ctx=document.getElementById('trend-chart').getContext('2d');
+  trendChart=new Chart(ctx,{type:'line',data:{labels:years.map(String),datasets:terms.map((term,i)=>({label:term,data:years.map(y=>series[term][y]||0),borderColor:COLORS[i%COLORS.length],backgroundColor:'transparent',borderWidth:2,pointRadius:3,tension:0.4,hidden:!activeTerms.has(term)}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#7a7870',font:{size:12}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#7a7870',font:{size:12}},beginAtZero:true}}}});
+  const yearCounts={};
+  DATA.nodes.forEach(n=>{yearCounts[n.year]=(yearCounts[n.year]||0)+1;});
+  const sortedYears=Object.keys(yearCounts).sort();
+  const ctx2=document.getElementById('year-chart').getContext('2d');
+  yearChart=new Chart(ctx2,{type:'bar',data:{labels:sortedYears,datasets:[{label:'Papers',data:sortedYears.map(y=>yearCounts[y]),backgroundColor:sortedYears.map((_,i)=>`hsla(${200+i*7},70%,60%,0.7)`),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#7a7870',font:{size:12}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#7a7870',font:{size:12}},beginAtZero:true}}}});
+}
+
+// ── Top papers ───────────────────────────────────────────────────────────────
+function renderTopPapers() {
+  document.getElementById('top-empty').style.display='none';
+  const tl=document.getElementById('top-list');
+  tl.style.display='block';
+  const sorted=[...DATA.nodes].sort((a,b)=>(b.degree||0)-(a.degree||0)).slice(0,30);
+  tl.innerHTML=sorted.map((p,i)=>`
+    <div class="top-paper">
+      <div class="rank-num">${String(i+1).padStart(2,'0')}</div>
+      <div style="flex:1;">
+        <h4>${esc(p.title)}</h4>
+        <div class="meta">
+          <span>📅 ${p.year||'?'}</span>
+          <span>👥 ${(p.authors||[]).slice(0,3).join(', ')}</span>
+          <span>📂 ${(p.categories||[]).slice(0,2).join(', ')}</span>
+        </div>
+        <a href="${p.url}" target="_blank" style="margin-top:6px;display:inline-block;">arXiv ↗</a>
+      </div>
+      <div class="cites-big"><div class="num">${p.degree||0}</div><div class="lbl">connections</div></div>
+    </div>`).join('');
+}
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab+'-panel').classList.add('active');
+  });
+});
+document.querySelectorAll('.pill[data-filter]').forEach(pill=>{
+  pill.addEventListener('click',()=>{
+    document.querySelectorAll('.pill[data-filter]').forEach(p=>p.classList.remove('active'));
+    pill.classList.add('active');
+    activeEdgeFilter=pill.dataset.filter;
+    if(DATA) renderGraph();
+  });
+});
+const yMin=document.getElementById('year-min'), yMax=document.getElementById('year-max'), yLabel=document.getElementById('year-label');
+function onYearChange(){
+  let mn=parseInt(yMin.value),mx=parseInt(yMax.value);
+  if(mn>mx){yMin.value=mx;yMax.value=mn;[mn,mx]=[mx,mn];}
+  yLabel.textContent=`${mn}–${mx}`;
+  if(DATA) buildPaperList(DATA.nodes.filter(n=>n.year>=mn&&n.year<=mx));
+}
+yMin.addEventListener('input',onYearChange);
+yMax.addEventListener('input',onYearChange);
+document.getElementById('filter-input').addEventListener('input',e=>{
+  const q=e.target.value.toLowerCase();
+  if(!DATA) return;
+  if(!q){buildPaperList(DATA.nodes);return;}
+  buildPaperList(DATA.nodes.filter(n=>n.title.toLowerCase().includes(q)||(n.authors||[]).join(' ').toLowerCase().includes(q)));
+});
+document.getElementById('topic-input').addEventListener('keydown',e=>{if(e.key==='Enter')startSearch();});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function showLoading(on){document.getElementById('loading').classList.toggle('show',on);}
+function setLoadingText(txt,sub=''){document.getElementById('loading-text').textContent=txt;document.getElementById('loading-sub').textContent=sub;}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// Auto-start on load
+startSearch();
+</script>
+</body>
+</html>

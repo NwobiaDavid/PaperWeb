@@ -1,0 +1,333 @@
+{
+  "meta": {
+    "generated": "2026-03-18T15:49:21.956397",
+    "node_count": 10,
+    "edge_count": 0
+  },
+  "nodes": [
+    {
+      "id": "2306.13552v2",
+      "title": "Techno-economic analysis of renewable energy generation at the South Pole",
+      "year": 2023,
+      "authors": [
+        "Susan Babinec",
+        "Ian Baring-Gould",
+        "Amy N. Bender",
+        "Nate Blair",
+        "Xiangkun Li"
+      ],
+      "categories": [
+        "physics.soc-ph",
+        "hep-ex"
+      ],
+      "citations": 0,
+      "degree": 0,
+      "url": "https://arxiv.org/abs/2306.13552v2"
+    },
+    {
+      "id": "2508.19345v2",
+      "title": "Privacy-Preserving Distributed Control for a Networked Battery Energy Storage System",
+      "year": 2025,
+      "authors": [
+        "Mihitha Maithripala",
+        "Zongli Lin"
+      ],
+      "categories": [
+        "eess.SY"
+      ],
+      "citations": 0,
+      "degree": 0,
+      "url": "https://arxiv.org/abs/2508.19345v2"
+    },
+    {
+      "id": "1704.04166v1",
+      "title": "Intelligent Home Energy Management System for Distributed Renewable Generators, Dispatchable Residential Loads and Distributed Energy Storage Devices",
+      "year": 2017,
+      "authors": [
+        "Adetokunbo Ajao",
+        "Jingwei Luo",
+        "Zheming Liang",
+        "Qais H. Alsafasfeh",
+        "Wencong Su"
+      ],
+      "categories": [
+        "math.OC"
+      ],
+      "citations": 13,
+      "degree": 0,
+      "url": "https://arxiv.org/abs/1704.04166v1"
+    },
+    {
+      "id": "2111.02005v1",
+      "title": "Privacy-Preserving Energy Storage Sharing with Blockchain and Secure Multi-Party Computation",
+      "year": 2021,
+      "authors": [
+        "Nan Wang",
+        "Sid Chi-Kin Chau",
+        "Yue Zhou"
+      ],
+      "categories": [
+        "cs.CR",
+        "math.OC"
+      ],
+      "citations": 35,
+      "degree": 0,
+      "url": "https://arxiv.org/abs/2111.02005v1"
+    },
+    {
+      "id": "2201.06566v2",
+      "title": "Sizing of Energy Storage System for Virtual Inertia Emulation",
+      "year": 2022,
+      "authors": [
+        "Mohamed Abuagreb",
+        "Ahmed Abuhussein",
+        "Saif alZahir"
+      ],
+      "categories": [
+        "eess.SY"
+      ],
+      "citations": 7,
+      "degree": 0,
+      "url": "https://arxiv.org/abs/2201.06566v2"
+    },
+    {
+      "id": "astro-ph/0510346v1",
+      "title": "The Dark Energy Survey",
+      "year": 2005,
+      "authors": [
+        "The Dark Energy Survey Collaboration"
+      ],
+      "categories": [
+        "astro-ph"
+      ],
+      "citations": 4,
+      "degree": 0,
+      "url": "https://arxiv.org/abs/astro-ph/0510346v1"
+    },
+    {
+      "id": "1211.0310v1",
+      "title": "Large Synoptic Survey Telescope: Dark Energy Science Collaboration",
+      "year": 2012,
+      "authors": [
+        "LSST Dark Energy Science Collaboration"
+      ],
+      "categories": [
+        "astro-ph.CO",
+        "hep-ex"
+      ],
+      "citations": 0,
+      "degree": 0,
+      "url": "https://arxiv.org/abs/1211.0310v1"
+    },
+    {
+      "id": "2201.08909v1",
+      "title": "Uncertainty-Cognizant Model Predictive Control for Energy Management of Residential Buildings with PVT and Thermal Energy Storage",
+      "year": 2022,
+      "authors": [
+        "Hossein Kalantar-Neyestanaki",
+        "Madjid Soltani"
+      ],
+      "categories": [
+        "eess.SY",
+        "cs.LG"
+      ],
+      "citations": 0,
+      "degree": 0,
+      "url": "https://arxiv.org/abs/2201.08909v1"
+    },
+    {
+      "id": "1807.00673v1",
+      "title": "Flexibility potentials of a combined use of heat storages and batteries in PV-CHP hybrid systems",
+      "year": 2018,
+      "authors": [
+        "Tanja M. Kneiske",
+        "Martin Braun"
+      ],
+      "categories": [
+        "eess.SY",
+        "cs.CY"
+      ],
+      "citations": 21,
+      "degree": 0,
+      "url": "https://arxiv.org/abs/1807.00673v1"
+    },
+    {
+      "id": "2201.06407v4",
+      "title": "Chance-Constrained Generic Energy Storage Operations under Decision-Dependent Uncertainty",
+      "year": 2022,
+      "authors": [
+        "Ning Qi",
+        "Pierre Pinson",
+        "Mads R. Almassalkhi",
+        "Lin Cheng",
+        "Yingrui Zhuang"
+      ],
+      "categories": [
+        "math.OC",
+        "math.PR"
+      ],
+      "citations": 0,
+      "degree": 0,
+      "url": "https://arxiv.org/abs/2201.06407v4"
+    }
+  ],
+  "edges": [],
+  "trends": {
+    "years": [
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "series": {
+      "lithium-ion": {
+        "2015": 0,
+        "2016": 0,
+        "2017": 0,
+        "2018": 0,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 1,
+        "2024": 0,
+        "2025": 0,
+        "2026": 0
+      },
+      "battery": {
+        "2015": 0,
+        "2016": 0,
+        "2017": 0,
+        "2018": 0,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 1,
+        "2023": 1,
+        "2024": 0,
+        "2025": 1,
+        "2026": 0
+      },
+      "grid storage": {
+        "2015": 0,
+        "2016": 0,
+        "2017": 0,
+        "2018": 0,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 0,
+        "2024": 0,
+        "2025": 0,
+        "2026": 0
+      },
+      "hydrogen": {
+        "2015": 0,
+        "2016": 0,
+        "2017": 0,
+        "2018": 0,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 0,
+        "2024": 0,
+        "2025": 0,
+        "2026": 0
+      },
+      "solar": {
+        "2015": 0,
+        "2016": 0,
+        "2017": 1,
+        "2018": 0,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 1,
+        "2024": 0,
+        "2025": 0,
+        "2026": 0
+      },
+      "wind": {
+        "2015": 0,
+        "2016": 0,
+        "2017": 0,
+        "2018": 0,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 1,
+        "2024": 0,
+        "2025": 0,
+        "2026": 0
+      },
+      "pumped hydro": {
+        "2015": 0,
+        "2016": 0,
+        "2017": 0,
+        "2018": 0,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 0,
+        "2024": 0,
+        "2025": 0,
+        "2026": 0
+      },
+      "supercapacitor": {
+        "2015": 0,
+        "2016": 0,
+        "2017": 0,
+        "2018": 0,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 0,
+        "2024": 0,
+        "2025": 0,
+        "2026": 0
+      },
+      "thermal storage": {
+        "2015": 0,
+        "2016": 0,
+        "2017": 0,
+        "2018": 0,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 0,
+        "2024": 0,
+        "2025": 0,
+        "2026": 0
+      },
+      "flow battery": {
+        "2015": 0,
+        "2016": 0,
+        "2017": 0,
+        "2018": 0,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 0,
+        "2024": 0,
+        "2025": 0,
+        "2026": 0
+      }
+    }
+  }
+}
