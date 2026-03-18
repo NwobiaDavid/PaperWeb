@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Citation Network Mapper</title>
+
+  <!-- ── Fonts ──────────────────────────────────────────────────────────── -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- ── Tailwind CDN (must load before tailwind.config inline block) ──── -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    /* Tailwind theme extension — kept here so the CDN build can process it
+       before any classes are resolved.                                     */
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Syne', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- ── App styles (variables, base reset, component states) ──────────── -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- ── Third-party libraries ─────────────────────────────────────────── -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"           defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" defer></script>
+</head>
+<body>
+
+<!-- ── Loading overlay ──────────────────────────────────────────────────── -->
+<div id="loading"
+     class="fixed inset-0 bg-black/90 hidden items-center justify-center z-50 flex-col gap-3.5">
+  <div class="spinner"></div>
+  <div id="loading-text"  class="text-sm text-[var(--text)]">Connecting to arXiv…</div>
+  <div id="loading-sub"   class="text-xs text-[var(--muted)]">Fetching real paper metadata</div>
+</div>
+
+<!-- ── Header ───────────────────────────────────────────────────────────── -->
+<header class="px-6 py-3.5 border-b border-[var(--border)] flex items-center gap-4 bg-[var(--bg2)] flex-wrap">
+
+  <!-- Logo -->
+  <div class="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
+       style="background:linear-gradient(135deg,var(--accent),var(--accent2))">🔬</div>
+
+  <!-- Title -->
+  <div>
+    <h1 class="text-base font-semibold tracking-tight">Citation Network Mapper</h1>
+    <p id="topic-label" class="text-xs text-[var(--muted)]">Enter a topic to explore the literature</p>
+  </div>
+
+  <!-- Search form -->
+  <div class="flex gap-2 flex-1 min-w-[260px] max-w-xl">
+    <div class="relative flex-1">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm pointer-events-none">🔍</span>
+      <input
+        type="text"
+        id="topic-input"
+        placeholder="e.g. CRISPR gene editing, federated learning, quantum computing…"
+        value="renewable energy storage"
+        class="w-full pl-9 pr-3 py-2 bg-[var(--bg3)] border border-[var(--border2)] rounded-lg
+               text-[var(--text)] text-sm outline-none focus:border-[var(--accent)] transition-colors">
+    </div>
+    <button
+      id="search-btn"
+      onclick="startSearch()"
+      class="px-4 py-2 bg-[var(--accent)] text-white border-0 rounded-lg text-sm font-medium
+             cursor-pointer whitespace-nowrap hover:opacity-90 disabled:opacity-40
+             disabled:cursor-not-allowed transition-opacity flex-shrink-0">
+      Search
+    </button>
+  </div>
+
+  <!-- Stats badges -->
+  <div class="flex gap-2 items-center ml-auto">
+    <span id="node-badge"
+          class="text-[11px] px-2.5 py-0.5 rounded-full border font-mono
+                 border-[rgba(79,142,247,.4)] text-[var(--accent)] bg-[rgba(79,142,247,.08)]">—</span>
+    <span id="edge-badge"
+          class="text-[11px] px-2.5 py-0.5 rounded-full border font-mono
+                 border-[rgba(34,201,153,.4)] text-[var(--accent2)] bg-[rgba(34,201,153,.08)]">—</span>
+  </div>
+</header>
+
+<!-- ── Quick-topic bar ───────────────────────────────────────────────────── -->
+<div class="bg-[var(--bg2)] border-b border-[var(--border)] px-6 py-1.5 flex items-center gap-2 flex-wrap">
+  <span class="text-xs text-[var(--muted)] whitespace-nowrap">Quick topics:</span>
+
+  <span class="qtag text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+               text-[var(--muted)] cursor-pointer hover:border-[var(--border2)]
+               hover:text-[var(--text)] transition-all whitespace-nowrap"
+        onclick="quickSearch('machine learning in agriculture')">ML in agriculture</span>
+
+  <span class="qtag text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+               text-[var(--muted)] cursor-pointer hover:border-[var(--border2)]
+               hover:text-[var(--text)] transition-all whitespace-nowrap"
+        onclick="quickSearch('deep learning medical imaging')">Medical imaging</span>
+
+  <span class="qtag text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+               text-[var(--muted)] cursor-pointer hover:border-[var(--border2)]
+               hover:text-[var(--text)] transition-all whitespace-nowrap"
+        onclick="quickSearch('climate change adaptation')">Climate adaptation</span>
+
+  <span class="qtag text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+               text-[var(--muted)] cursor-pointer hover:border-[var(--border2)]
+               hover:text-[var(--text)] transition-all whitespace-nowrap"
+        onclick="quickSearch('quantum computing algorithms')">Quantum computing</span>
+
+  <span class="qtag text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+               text-[var(--muted)] cursor-pointer hover:border-[var(--border2)]
+               hover:text-[var(--text)] transition-all whitespace-nowrap"
+        onclick="quickSearch('federated learning privacy')">Federated learning</span>
+
+  <span class="qtag text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+               text-[var(--muted)] cursor-pointer hover:border-[var(--border2)]
+               hover:text-[var(--text)] transition-all whitespace-nowrap"
+        onclick="quickSearch('CRISPR gene editing')">CRISPR</span>
+
+  <span class="qtag text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+               text-[var(--muted)] cursor-pointer hover:border-[var(--border2)]
+               hover:text-[var(--text)] transition-all whitespace-nowrap"
+        onclick="quickSearch('large language models')">Large language models</span>
+
+  <span class="qtag text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+               text-[var(--muted)] cursor-pointer hover:border-[var(--border2)]
+               hover:text-[var(--text)] transition-all whitespace-nowrap"
+        onclick="quickSearch('drug discovery machine learning')">Drug discovery</span>
+</div>
+
+<!-- ── App grid (sidebar + main) ────────────────────────────────────────── -->
+<div class="app">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <aside class="bg-[var(--bg2)] border-r border-[var(--border)] overflow-y-auto flex flex-col">
+
+    <!-- Filter -->
+    <div class="px-3.5 py-3 border-b border-[var(--border)]">
+      <h3 class="text-[11px] tracking-widest uppercase text-[var(--muted)] mb-2">Filter results</h3>
+      <div class="relative">
+        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm">⌕</span>
+        <input
+          type="text"
+          id="filter-input"
+          placeholder="Title or author…"
+          class="w-full pl-7 pr-2.5 py-1.5 bg-[var(--bg3)] border border-[var(--border)] rounded-lg
+                 text-[var(--text)] text-[13px] outline-none focus:border-[var(--accent)] transition-colors">
+      </div>
+    </div>
+
+    <!-- Edge-type filter -->
+    <div class="px-3.5 py-3 border-b border-[var(--border)]">
+      <h3 class="text-[11px] tracking-widest uppercase text-[var(--muted)] mb-2">Edge type</h3>
+      <div class="flex flex-wrap gap-1.5">
+        <span class="pill active text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+                     text-[var(--muted)] cursor-pointer transition-all select-none"
+              data-filter="all">All</span>
+        <span class="pill text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+                     text-[var(--muted)] cursor-pointer transition-all select-none"
+              data-filter="citation">Citations</span>
+        <span class="pill text-xs px-2.5 py-0.5 rounded-full border border-[var(--border)]
+                     text-[var(--muted)] cursor-pointer transition-all select-none"
+              data-filter="coauthor">Co-authors</span>
+      </div>
+    </div>
+
+    <!-- Year range -->
+    <div class="px-3.5 py-3 border-b border-[var(--border)]">
+      <h3 class="text-[11px] tracking-widest uppercase text-[var(--muted)] mb-2">Year range</h3>
+      <div class="flex gap-2 items-center">
+        <input type="range" id="year-min" min="2010" max="2025" value="2010" class="flex-1">
+        <span id="year-label"
+              class="font-mono text-[11px] whitespace-nowrap text-[var(--accent)] min-w-[72px] text-center">
+          2010–2025
+        </span>
+        <input type="range" id="year-max" min="2010" max="2025" value="2025" class="flex-1">
+      </div>
+    </div>
+
+    <!-- Stats grid -->
+    <div class="px-3.5 py-3 border-b border-[var(--border)]">
+      <h3 class="text-[11px] tracking-widest uppercase text-[var(--muted)] mb-2">Stats</h3>
+      <div class="grid grid-cols-2 gap-1.5">
+        <div class="bg-[var(--bg3)] rounded-lg p-2.5 border border-[var(--border)]">
+          <div class="text-[11px] text-[var(--muted)] mb-0.5">Papers</div>
+          <div id="stat-nodes" class="text-lg font-semibold font-mono text-[var(--accent)]">—</div>
+        </div>
+        <div class="bg-[var(--bg3)] rounded-lg p-2.5 border border-[var(--border)]">
+          <div class="text-[11px] text-[var(--muted)] mb-0.5">Links</div>
+          <div id="stat-edges" class="text-lg font-semibold font-mono text-[var(--accent2)]">—</div>
+        </div>
+        <div class="bg-[var(--bg3)] rounded-lg p-2.5 border border-[var(--border)]">
+          <div class="text-[11px] text-[var(--muted)] mb-0.5">Most linked</div>
+          <div id="stat-top"   class="text-lg font-semibold font-mono text-[var(--warn)]">—</div>
+        </div>
+        <div class="bg-[var(--bg3)] rounded-lg p-2.5 border border-[var(--border)]">
+          <div class="text-[11px] text-[var(--muted)] mb-0.5">Avg degree</div>
+          <div id="stat-deg"   class="text-lg font-semibold font-mono text-[var(--text)]">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paper list (scrollable) -->
+    <div id="paper-list" class="overflow-y-auto flex-1">
+      <div class="flex flex-col items-center justify-center gap-2.5 text-[var(--muted)] px-5 py-10">
+        <span class="text-4xl opacity-35">📄</span>
+        <p class="text-sm">Papers appear here</p>
+        <small class="text-xs opacity-60">after you search a topic</small>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main content ─────────────────────────────────────────────────────── -->
+  <main class="flex flex-col overflow-hidden">
+
+    <!-- Tab bar -->
+    <div class="flex border-b border-[var(--border)] bg-[var(--bg2)] flex-shrink-0">
+      <div class="tab active px-4 py-3 text-sm cursor-pointer text-[var(--muted)]
+                  border-b-2 border-transparent transition-all select-none"
+           data-tab="graph">🕸 Network Graph</div>
+      <div class="tab px-4 py-3 text-sm cursor-pointer text-[var(--muted)]
+                  border-b-2 border-transparent transition-all select-none"
+           data-tab="trends">📈 Keyword Trends</div>
+      <div class="tab px-4 py-3 text-sm cursor-pointer text-[var(--muted)]
+                  border-b-2 border-transparent transition-all select-none"
+           data-tab="top">🏆 Top Papers</div>
+    </div>
+
+    <!-- ── Graph panel ──────────────────────────────────────────────────────── -->
+    <div class="panel active" id="graph-panel">
+
+      <!-- Empty state -->
+      <div id="graph-empty"
+           class="flex flex-col items-center justify-center h-full gap-2.5 text-[var(--muted)] w-full">
+        <span class="text-4xl opacity-35">🕸</span>
+        <p class="text-sm">Enter a topic and click Search</p>
+        <small class="text-xs opacity-60">Fetches up to 200 real papers from arXiv and maps their network</small>
+      </div>
+
+      <!-- D3 canvas -->
+      <svg id="graph-svg"></svg>
+
+      <!-- Zoom controls -->
+      <div id="graph-controls"
+           style="display:none; position:absolute; top:12px; right:12px; flex-direction:column; gap:7px;">
+        <button id="zoom-in"
+                class="w-8 h-8 rounded-lg bg-[var(--bg2)] border border-[var(--border2)]
+                       text-[var(--text)] text-sm cursor-pointer flex items-center justify-center
+                       hover:bg-[var(--bg3)] transition-colors">+</button>
+        <button id="zoom-out"
+                class="w-8 h-8 rounded-lg bg-[var(--bg2)] border border-[var(--border2)]
+                       text-[var(--text)] text-sm cursor-pointer flex items-center justify-center
+                       hover:bg-[var(--bg3)] transition-colors">−</button>
+        <button id="zoom-reset"
+                class="w-8 h-8 rounded-lg bg-[var(--bg2)] border border-[var(--border2)]
+                       text-[var(--text)] text-sm cursor-pointer flex items-center justify-center
+                       hover:bg-[var(--bg3)] transition-colors">⊙</button>
+      </div>
+
+      <!-- Hover tooltip -->
+      <div id="tooltip"></div>
+
+      <!-- Legend -->
+      <div id="graph-legend"
+           style="display:none; position:absolute; bottom:14px; left:14px; flex-direction:row;"
+           class="bg-[var(--bg2)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs gap-3.5">
+        <div class="flex items-center gap-1.5 text-[var(--muted)]">
+          <div class="w-2 h-2 rounded-full" style="background:var(--warn)"></div>
+          Highly connected
+        </div>
+        <div class="flex items-center gap-1.5 text-[var(--muted)]">
+          <div class="w-2 h-2 rounded-full" style="background:var(--accent)"></div>
+          Citation
+        </div>
+        <div class="flex items-center gap-1.5 text-[var(--muted)]">
+          <div class="w-2 h-2 rounded-full" style="background:var(--accent2)"></div>
+          Co-author
+        </div>
+      </div>
+    </div><!-- /#graph-panel -->
+
+    <!-- ── Trends panel ─────────────────────────────────────────────────────── -->
+    <div class="panel" id="trends-panel">
+
+      <div id="trends-empty"
+           class="flex flex-col items-center justify-center h-full gap-2.5 text-[var(--muted)]">
+        <span class="text-4xl opacity-35">📈</span>
+        <p class="text-sm">Search a topic to see trends</p>
+      </div>
+
+      <div id="trends-content" style="display:none;" class="p-6 overflow-y-auto w-full">
+
+        <!-- Keyword frequency chart -->
+        <div class="bg-[var(--bg2)] border border-[var(--border)] rounded-xl p-5 mb-4">
+          <h3 class="text-[15px] font-semibold mb-1">Keyword frequency over time</h3>
+          <p id="trend-desc" class="text-sm text-[var(--muted)] mb-4">
+            Term frequency in titles and abstracts per year
+          </p>
+          <div id="trend-legend" class="flex flex-wrap gap-2 mb-3"></div>
+          <div class="relative h-80"><canvas id="trend-chart"></canvas></div>
+        </div>
+
+        <!-- Publication volume chart -->
+        <div class="bg-[var(--bg2)] border border-[var(--border)] rounded-xl p-5 mb-4">
+          <h3 class="text-[15px] font-semibold mb-1">Publication volume by year</h3>
+          <p class="text-sm text-[var(--muted)] mb-4">Papers in this dataset published per year</p>
+          <div class="relative h-60"><canvas id="year-chart"></canvas></div>
+        </div>
+      </div>
+    </div><!-- /#trends-panel -->
+
+    <!-- ── Top Papers panel ──────────────────────────────────────────────────── -->
+    <div class="panel" id="top-panel">
+
+      <div id="top-empty"
+           class="flex flex-col items-center justify-center h-full gap-2.5 text-[var(--muted)]">
+        <span class="text-4xl opacity-35">🏆</span>
+        <p class="text-sm">Search a topic to see top papers</p>
+      </div>
+
+      <div id="top-list" style="display:none;" class="p-6 overflow-y-auto w-full"></div>
+    </div><!-- /#top-panel -->
+
+  </main>
+</div><!-- /.app -->
+
+<!-- ── Application scripts (order matters: config → state → utils → …) ── -->
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/network.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/trends.js"></script>
+<script src="js/papers.js"></script>
+<script src="js/controls.js"></script>
+<script src="js/app.js"></script>
+
+<!-- Boot -->
+<script>
+  /* DOMContentLoaded fires after HTML is parsed but before deferred scripts
+     (D3, Chart.js) have loaded. We wait for 'load' instead so that every
+     dependency is ready before init() runs.                                */
+  window.addEventListener('load', init);
+</script>
+
+</body>
+</html>
