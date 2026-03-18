@@ -10,7 +10,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 
 export const metadata: Metadata = {
- title:       'Citation Network Mapper',
+ title:       'Paper Web',
   description: 'Explore arXiv citation and co-authorship networks interactively.',
 };
 

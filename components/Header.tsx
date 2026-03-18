@@ -19,16 +19,16 @@ export default function Header({
     <header className="px-6 py-3.5 border-b border-white/[0.07] flex items-center gap-4 bg-[#111318] flex-wrap">
       {/* Logo */}
       <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
-        style={{ background: 'linear-gradient(135deg,#4f8ef7,#22c999)' }}
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-3xl border p-5 bg-slate-900 flex-shrink-0"
+        // style={{ background: 'linear-gradient(135deg,#4f8ef7,#22c999)' }}
       >
-        🔬
+        🕸️
       </div>
 
       {/* Title */}
       <div>
         <h1 className="text-base font-semibold tracking-tight text-[#e8e6e0]">
-          Citation Network Mapper
+          Paper Web
         </h1>
         <p className="text-xs text-[#686660]">{topicLabel}</p>
       </div>
